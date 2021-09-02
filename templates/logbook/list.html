@@ -1,0 +1,30 @@
+{% extends "logbook/base.html" %}
+
+{% block head %}
+<style>
+</style>
+{% endblock %}
+
+{% block content %}
+    <h1>Logbooks</h1>
+    <div>
+        <table>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Creation time</th>
+            <th></th>
+        </tr>
+        {% for logbook in logbooks %}
+        <tr>
+            <td>{{ logbook.id }}</td>
+            <td>{{ logbook.title }}</td>
+            <td>{{ logbook.status.value }}</td>
+            <td>{{ logbook.creation_time }}</td>
+            <td><a href="{{ url_for('view_driverslogbook', logbook_id=logbook.id) }}">Info</a></td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+{% endblock %}

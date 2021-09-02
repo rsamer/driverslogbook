@@ -1,0 +1,118 @@
+{% extends "logbook/base.html" %}
+
+{% block head %}
+<style>
+  #map {
+    height: 400px;
+    width: 600px;
+   }
+</style>
+<script>
+    // Initialize and add the map
+    var map;
+    var routeResponse;
+    var directionsService;
+    var directionsDisplay;
+
+    function convertDecimalCoordinateToDMS(coordinate) {
+        var convertCoord = Math.abs(coordinate);
+        var coordDegrees = Math.floor(convertCoord);
+        var coordMinutesDecimal = (convertCoord - coordDegrees) * 60;
+        var coordMinutes = Math.floor(coordMinutesDecimal);
+        var coordSecondsDecimal = (coordMinutesDecimal - coordMinutes) * 60;
+        var coordSeconds = Math.floor(coordSecondsDecimal);
+        return (((coordinate < 0) ? "-" : "") + coordDegrees + "Â° " + coordMinutes + "' " + coordSeconds + "\'\'");
+    }
+
+    function calcDistance(start, end, waypoints) {
+        var waypoints_list = [];
+        for (var i = 0; i < waypoints.length; ++i) {
+            waypoints_list.push({location: waypoints[i], stopover: true});
+        }
+        var request = {
+            origin: start,
+            destination: end,
+            // waypoints: waypoints_list,
+            // optimizeWaypoints: true,
+            travelMode: google.maps.TravelMode.DRIVING
+        };
+
+        directionsService.route(request, function (response, status) {
+            if (status == google.maps.DirectionsStatus.OK) {
+                routeResponse = response;
+                directionsDisplay.setDirections(routeResponse);
+                console.log(response);
+                for (var i in response.routes) {
+                    var totalDistance = 0.0;
+                    for (var j in response.routes[i].legs) {
+                        totalDistance += response.routes[i].legs[j].distance.value;
+                    }
+                    totalDistance /= 1000.0;
+                    document.getElementById('total-distance').innerHTML = "Distance: " + totalDistance + "km";
+                }
+            }
+        });
+    }
+
+    function initMap() {
+      {% if logbook.location_samples|length > 1 %}
+      const start = new google.maps.LatLng({{ logbook.location_samples[0].longitude }}, {{ logbook.location_samples[0].latitude }})
+      const end = new google.maps.LatLng({{ logbook.location_samples[-1].longitude }}, {{ logbook.location_samples[-1].latitude }})
+      const options = {
+          zoom: 11,
+          center: start,
+          scrollwheel: true,
+          disableDoubleClickZoom: false,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: false,
+          panControl: true,
+          panControlOptions: {position: google.maps.ControlPosition.TOP_LEFT},
+          zoomControl: true,
+          zoomControlOptions: {style: google.maps.ZoomControlStyle.LARGE, position: google.maps.ControlPosition.TOP_LEFT},
+          streetViewControl: false,
+          scaleControl: true,
+          overviewMapControl: true
+      };
+      map = new google.maps.Map(document.getElementById('map'), options);
+      directionsService = new google.maps.DirectionsService();
+      directionsDisplay = new google.maps.DirectionsRenderer();
+      directionsDisplay.setMap(map);
+      waypoints = [];
+      {% for waypoint_idx in waypoints_idx %}
+      waypoints.push(new google.maps.LatLng({{ logbook.location_samples[waypoint_idx].longitude }}, {{ logbook.location_samples[waypoint_idx].latitude }}));
+      {% endfor %}
+      //var mk1 = new google.maps.Marker({position: start, map: map, draggable: false});
+      //var mk2 = new google.maps.Marker({position: end, map: map, draggable: false});
+      geocoder = new google.maps.Geocoder();
+      calcDistance(start, end, waypoints);
+      {% endif %}
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+    <h1>Logbook #{{ logbook.id }}</h1>
+    <div>Time: {{ logbook.creation_time }}</div>
+    <div>Status: {{ logbook.status.value }}</div>
+    <div>Type: {{ logbook.ride_type.name }}</div>
+    <div id="total-distance"></div>
+    <div id="map"></div>
+    <p>&nbsp;</p>
+    <div>
+        <table>
+        <tr>
+            <th>ID</th>
+            <th colspan="2">Position</th>
+            <th>Time</th>
+        </tr>
+        {% for sample in logbook.location_samples %}
+        <tr>
+            <td>#{{ sample.id }}</td>
+            <td>({{ sample.longitude }}, </td>
+            <td>{{ sample.latitude }})</td>
+            <td>{{ sample.creation_time }}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+{% endblock %}
